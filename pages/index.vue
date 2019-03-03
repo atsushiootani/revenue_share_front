@@ -3,20 +3,19 @@
     <div>
       <app-logo/>
       <h1 class="title">
-        agreement_front
+        revenue share contract
       </h1>
       <h2 class="subtitle">
-        Nuxt.js project
+        報酬分配を自動化して、お金で揉めなくなることを目指します
       </h2>
-      <div class="links">
-        <a
-          href="https://nuxtjs.org/"
-          target="_blank"
-          class="button--green">Documentation</a>
-        <a
-          href="https://github.com/nuxt/nuxt.js"
-          target="_blank"
-          class="button--grey">GitHub</a>
+      <div>
+        あなたのCoinBase {{CoinBase}}
+      </div>
+      <div>
+        アカウント数 {{AccountCount}}
+      </div>
+      <div>
+        あなたのAccount {{Account0}}
       </div>
     </div>
   </section>
@@ -24,10 +23,23 @@
 
 <script>
 import AppLogo from '~/components/AppLogo.vue'
+import web3 from '../helper/web3';
 
 export default {
-  components: {
-    AppLogo
+  data() {
+    return {
+      Host: "wait..",
+      CoinBase: "wait...",
+      AccountCount: "0",
+      Account0: "wait...",
+    }
+  },
+  beforeMount(){
+    console.log("in beforeMount");
+    this.Host = web3.currentProvider.host;
+    web3.eth.getCoinbase().then(val => this.CoinBase = val);    // <== ここでweb3使用、CoinBase変数にバインド
+    web3.eth.getAccounts().then(val => this.AccountCount = val.length);
+    web3.eth.getAccounts().then(val => this.Account0 = val[0]);
   }
 }
 </script>

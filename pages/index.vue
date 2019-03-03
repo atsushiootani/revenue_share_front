@@ -1,7 +1,6 @@
 <template>
   <section class="container">
     <div>
-      <app-logo/>
       <h1 class="title">
         revenue share contract
       </h1>
@@ -17,6 +16,11 @@
       <div>
         あなたのAccount {{Account0}}
       </div>
+
+      <div>
+          <button type="button" class="btn btn-primary" @click="member_check">私はメンバー？</button>
+        {{IsMember}}
+      </div>
     </div>
   </section>
 </template>
@@ -24,6 +28,7 @@
 <script>
 import AppLogo from '~/components/AppLogo.vue'
 import web3 from '../helper/web3';
+import contract from '../helper/contract';
 
 export default {
   data() {
@@ -32,6 +37,7 @@ export default {
       CoinBase: "wait...",
       AccountCount: "0",
       Account0: "wait...",
+      IsMember: false,
     }
   },
   beforeMount(){
@@ -40,8 +46,20 @@ export default {
     web3.eth.getCoinbase().then(val => this.CoinBase = val);    // <== ここでweb3使用、CoinBase変数にバインド
     web3.eth.getAccounts().then(val => this.AccountCount = val.length);
     web3.eth.getAccounts().then(val => this.Account0 = val[0]);
+  },
+  methods: {
+    member_check(){
+      console.log("contract: ", contract);
+      //contract.amIMember.call().then(val => this.IsMember = val);
+      let response = contract.methods.amIMember();
+      console.log("response: ", response);
+      let response2 = contract.methods.amIMember().call();
+      console.log("response2: ", response2);
+    }
   }
 }
+
+
 </script>
 
 <style>

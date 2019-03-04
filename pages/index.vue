@@ -29,8 +29,10 @@
 import AppLogo from '~/components/AppLogo.vue'
 //import web3 from '../helper/web3';
 //import contract from '../helper/contract';
-import Web3 from 'web3';
+//import Web3 from 'web3';
 import abi from '../helper/abi';
+
+let contractInstance;
 
 export default {
   data() {
@@ -43,11 +45,90 @@ export default {
     }
   },
   beforeMount(){
+    let web3 = new Web3(ethereum);
+    ethereum.enable();
+
+    let contractAddress = "0x20Edd3b4350c1B5Af4f99DCa29AEf4c5C0473f1E";
+    let MyContract = web3.eth.contract(abi);
+    contractInstance = MyContract.at(contractAddress);
+    console.log("contractInstance:", contractInstance);
+
+    contractInstance.amIMember((err, result) =>{
+      if (err) { console.log(err); }
+      else {
+        console.log("amIMember:", result);
+      }
+    });
+
+    contractInstance.three((err, result) =>{
+      if (err) { console.log(err); }
+      else {
+        console.log("three:", result);
+      }
+    });
+
+    let block = web3.eth.defaultBlock; //"latest"
+    console.log('web3.eth.defaultBlock:', block);
+    web3.eth.getTransactionCount(contractAddress, ((err, count) => {
+      if (err) { console.log(err); }
+      else {
+        console.log('web3.eth.getTransactionCount():', count); //1
+        contractInstance.three((err, result) =>{
+          if (err) { console.log(err); }
+          else {
+            console.log("three:", result);
+          }
+        });
+
+
+        web3.eth.getTransactionFromBlock(block, 0, ((err, transaction) => {
+          if (err) { console.log(err); }
+          else{
+            console.log('web3.eth.getTransactionFromBlock:', transaction);
+            var txHash = transaction.hash;
+            console.log('txHash: ', txHash);
+          }
+        }));
+      }
+    }));
+
+    console.log('contractInstance.transactionHash:', contractInstance.transactionHash); //null
+    console.log('contractInstance.address:', contractInstance.address); //contractAddress
+
+    web3.eth.sendTransaction({
+      value: 1000000000000000000,//web3.utils.toWei('1', 'ether'),
+      gas:                200000,
+      from: "0x9c4E9Ac07D994F1Bf0b6CCADF015544449210C21"
+    }, ((err, hash) => {
+      if (err) { console.log(err); }
+      else {
+        console.log('txHash: ', hash); //"0xc00d7771c68ee0636beb7e36939f7fc2ec5715fdfd931f9dfd5a407295baf1c2"
+      }
+    }));
+    /*contractInstance.requestToJoin.sendTransaction({
+      value: 0,
+      gas: 200000,
+      from: "0xcfc6060C859FA123E3860d84868479A5e20F24a3",
+    }, (err, transactionHash) =>{
+      if (err) { console.log(err); }
+      else {
+        console.log("requestedToJoin: ", transactionHash);
+
+        //contractInstance.memberCount((err, result) =>{
+        //  if (err) { console.log(err); }
+        //  else {
+        //    console.log("memberCount:", result);
+        //  }
+        //})
+      }
+    });*/
+
+
     //console.log("in beforeMount");
     //ethereum.address = "0x20Edd3b4350c1B5Af4f99DCa29AEf4c5C0473f1E";
     //console.log("ethereum: ", ethereum);
 
-    let web3 = new Web3(ethereum);
+    /*let web3 = new Web3(ethereum);
     ethereum.enable();
 
     this.Host = web3.currentProvider.host;
@@ -55,7 +136,7 @@ export default {
     web3.eth.getAccounts().then(val => this.AccountCount = val.length);
     web3.eth.getAccounts().then(val => this.Account0 = val[0]);
 
-    this.web3 = web3;
+    this.web3 = web3;*/
   },
   methods: {
     member_check(){

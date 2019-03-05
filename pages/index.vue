@@ -40,13 +40,8 @@
 
 <script>
 import AppLogo from '~/components/AppLogo.vue'
-//import web3 from '../helper/web3';
-//import contract from '../helper/contract';
-import Web3 from 'web3';
-import abi from '../helper/abi';
-
-var web3;
-var contractInstance;
+import web3 from '../helper/web3';
+import contractInstance from '../helper/contract';
 
 export default {
   data() {
@@ -61,13 +56,7 @@ export default {
     }
   },
   beforeMount(){
-    web3 = new Web3(ethereum);
     console.log('web3:', web3);
-    ethereum.enable();
-
-    let contractAddress = "0x20Edd3b4350c1B5Af4f99DCa29AEf4c5C0473f1E";
-    let MyContract = web3.eth.contract(abi);
-    contractInstance = MyContract.at(contractAddress);
     console.log("contractInstance:", contractInstance);
     console.log('contractInstance.transactionHash:', contractInstance.transactionHash); //null
     console.log('contractInstance.address:', contractInstance.address); //contractAddress
@@ -105,7 +94,7 @@ export default {
     pay_to_project(event){
       console.log("pay_to_project: ", contractInstance);
       web3.eth.sendTransaction({
-        value: web3.utils.toWei(this.PayAmount, 'ether'),
+        value: web3.utils.toWei(this.PayAmount.toString(), 'ether'),
         gas:                200000,
         from: "0x9c4E9Ac07D994F1Bf0b6CCADF015544449210C21"
       }, ((err, hash) => {

@@ -50,33 +50,36 @@ export default {
       CoinBase: "wait...",
       AccountCount: "0",
       Account0: "wait...",
-      IsMember: false,
+      IsMember: true,
       Members: [],
       PayAmount: 1,
     }
   },
   beforeMount(){
+    console.log('window.ethereum: ', window.ethereum);
+    console.log('ethereum: ', ethereum);
+    web3 = new Web3(window.ethereum);
     console.log('web3:', web3);
-    console.log("contractInstance:", contractInstance);
-    console.log('contractInstance.transactionHash:', contractInstance.transactionHash); //null
-    console.log('contractInstance.address:', contractInstance.address); //contractAddress
+    ethereum.enable().then(()=>{
+      let contractAddress = "0x2Ad3064c7dbC4bEd6b52358C716AA8315bd681b3";//"0x20Edd3b4350c1B5Af4f99DCa29AEf4c5C0473f1E";
+      let MyContract = web3.eth.Contract(abi);
+      contractInstance = MyContract;//.at(contractAddress);
+      contractInstance.options.address = "0x2Ad3064c7dbC4bEd6b52358C716AA8315bd681b3";
+      console.log("contractInstance:", contractInstance);
+      console.log('contractInstance.transactionHash:', contractInstance.transactionHash); //null
+      console.log('contractInstance.address:', contractInstance.address); //contractAddress
+    });
   },
   methods: {
     member_check(event){
       console.log("contract: ", contractInstance);
-      contractInstance.amIMember((err, result)=>{
+      contractInstance.methods.amIMember.call((err, result)=>{
+        this.IsMember  = result;
         if (err) { console.log(err); }
         else {
           console.log("amIMember: ", result);
         }
       });
-
-      contractInstance.three((err, result) => {
-        if (err) { console.log(err); }
-        else {
-          console.log("three:", result);
-        }
-      })
     },
     request_to_join(event){
       console.log("request_to_join: ", contractInstance);

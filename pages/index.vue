@@ -40,8 +40,12 @@
 
 <script>
 import AppLogo from '~/components/AppLogo.vue'
-import web3 from '../helper/web3';
-import contractInstance from '../helper/contract';
+//import web3 from '../helper/web3';
+//import contractInstance from '../helper/contract';
+import abi from '../helper/abi';
+
+var web3;
+var contractInstance;
 
 export default {
   data() {
@@ -53,6 +57,7 @@ export default {
       IsMember: true,
       Members: [],
       PayAmount: 1,
+      Three: 0
     }
   },
   beforeMount(){
@@ -61,10 +66,11 @@ export default {
     web3 = new Web3(window.ethereum);
     console.log('web3:', web3);
     ethereum.enable().then(()=>{
-      let contractAddress = "0x2Ad3064c7dbC4bEd6b52358C716AA8315bd681b3";//"0x20Edd3b4350c1B5Af4f99DCa29AEf4c5C0473f1E";
-      let MyContract = web3.eth.Contract(abi);
-      contractInstance = MyContract;//.at(contractAddress);
-      contractInstance.options.address = "0x2Ad3064c7dbC4bEd6b52358C716AA8315bd681b3";
+      let contractAddress = "0x20Edd3b4350c1B5Af4f99DCa29AEf4c5C0473f1E";
+      let MyContract = web3.eth.contract(abi);
+      contractInstance = MyContract.at(contractAddress);
+      console.log("contractInstance:", contractInstance);
+      //contractInstance.options.address = contractAddress;
       console.log("contractInstance:", contractInstance);
       console.log('contractInstance.transactionHash:', contractInstance.transactionHash); //null
       console.log('contractInstance.address:', contractInstance.address); //contractAddress
@@ -73,7 +79,7 @@ export default {
   methods: {
     member_check(event){
       console.log("contract: ", contractInstance);
-      contractInstance.methods.amIMember.call((err, result)=>{
+      contractInstance.amIMember.call((err, result)=>{
         this.IsMember  = result;
         if (err) { console.log(err); }
         else {

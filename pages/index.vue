@@ -23,16 +23,16 @@
         <li v-for="(member, index) in AllMembers" :key="index">
           <p>{{member}}</p>
         </li>
-        <li>総貢献度数</li>
+        <li>総貢献度数 {{TotalContributeValue}}</li>
         <button type="button" class="btn btn-primary" @click="update_project_info">情報更新</button>
+        <li>未分配資金 {{DepositAmount}}, {{ContractBalance}}</li>
       </ul>
       <br>
       <br>
       <h2>あなたの情報</h2>
       <ul>
-        <li>
-          address: {{CoinBase}}
-        </li>
+        <li>address: {{CoinBase}}</li>
+        <li>残高: {{Balance}} Ether </li>
         <template v-if="AmIMember">
           <li>あなたはメンバーです</li>
           <li>
@@ -42,6 +42,21 @@
           <li>
             <input type="text" class="form-control" placeholder="追加に賛成したいaddress" v-model="VoteForAnotherAddress">
             <button type="button" class="btn btn-primary" @click="vote_for_member_waiting_for_join">メンバー追加に賛成する</button>
+          </li>
+          <li>
+            貢献度： {{MyContributeValue}}
+          </li>
+          <li>
+            <input type="text" class="form-control" placeholder="貢献度を数値で" v-model="ContributeValue">
+            <button type="button" class="btn btn-primary" @click="request_to_contribute">貢献度を申請する</button>
+          </li>
+          <li>投票可能な貢献度一覧</li>
+          <li v-for="(cid, index) in this.VotableContributeIds" :key="index">
+            id: {{cid}}
+          </li>
+          <li>
+            <input type="text" class="form-control" placeholder="承認する貢献のid" v-model="VoteContributeId">
+            <button type="button" class="btn btn-primary" @click="vote_for_contribute">貢献を承認する</button>
           </li>
         </template>
         <template v-else-if="isWaitingForJoinAddress">
@@ -78,18 +93,27 @@ import abi from '../helper/abi';
 
 var web3;
 var contractInstance;
+let contractAddress = "0xaD2d34fEDC73727B619310e5C52C1edD7258E96D";
 
 export default {
   data() {
     return {
       CoinBase: "wait...",
       Accounts: [],
+      Balance: '',
+      ContractBalance: '',
       AmIMember: false,
       isWaitingForJoinAddress: false,
       AllMembers: [],
       PayAmount: "",
       JoinAnotherAddress: "",
       VoteForAnotherAddress: '',
+      VotableContributeIds: [],
+      MyContributeValue: 0,
+      ContributeValue: '',
+      VoteContributeId: '',
+      TotalContributeValue: 0,
+      DepositAmount: 0,
       Message: "",
     }
   },
@@ -99,7 +123,6 @@ export default {
     web3 = new Web3(window.ethereum);
     console.log('web3:', web3);
     ethereum.enable().then(()=>{
-      let contractAddress = "0xb89A028C868186B1568f1cA109dCFA191eac5b32";
       let MyContract = web3.eth.contract(abi);
       contractInstance = MyContract.at(contractAddress);
       console.log("contractInstance:", contractInstance);
@@ -116,7 +139,20 @@ export default {
     update_project_info(){
       this.am_i_member();
       this.all_members();
+      this.get_balance();
       this.am_i_waiting_for_join_address();
+      this.total_contribute_value();
+      this.deposit_amount();
+      if (this.AmIMember){
+        this.contributes_of_member();
+        this.all_waiting_contributes();
+      }
+    },
+    get_balance(){
+      web3.eth.getBalance(this.CoinBase, (err, result)=>{
+        if (err) { console.log(err); }
+        else { this.Balance = web3.fromWei(result, 'ether'); }
+      });
     },
     all_members(){
       contractInstance.allMembers.call((err,result)=>{
@@ -143,37 +179,96 @@ export default {
         gas: 200000,
       }, (err, transactionHash) =>{
         if (err) { console.log(err); }
-        else { this.Message = "参加申請をしました\n" + this.Message; }
+        else {
+          this.Message = "参加申請をしました\n" + this.Message;
+          this.update_project_info();
+        }
       });
     },
     request_to_join_another(){
       console.log('this.JoinAnotherAddress: ', this.JoinAnotherAddress, web3.isAddress(this.JoinAnotherAddress));
       contractInstance.requestToJoinAnother.sendTransaction(this.JoinAnotherAddress, (err, transactionHash) => {
         if (err) { console.log(err); }
-        else { this.Message = "参加申請をしました\n" + this.Message; }
+        else {
+          this.Message = "参加申請をしました\n" + this.Message;
+          this.update_project_info();
+        }
       });
     },
     vote_for_member_waiting_for_join(){
       contractInstance.voteForMemberWaitingForJoin.sendTransaction(this.VoteForAnotherAddress,{
         value: 0,
         gas: 200000,
-        nonce: 1,
       }, (err, txhash)=>{
         if (err) { console.log(err); }
-        else { this.Message = this.VoteForAnotherAddress + "に投票しました\n" + this.Message; }
+        else {
+          this.Message = this.VoteForAnotherAddress + "に投票しました\n" + this.Message;
+          this.update_project_info();
+        }
+      });
+    },
+    all_waiting_contributes(){
+      contractInstance.allWaitingContributes.call((err, result)=>{
+        if (err) { console.log(err); }
+        else { console.log('contributes:', result); this.VotableContributeIds = result; }
+      });
+    },
+    contributes_of_member(){
+      contractInstance.contributeValue.call(this.CoinBase, (err, result)=>{
+        if (err) { console.log(err); }
+        else {
+          this.MyContributeValue = result;
+        }
+      });
+    },
+    request_to_contribute(){
+      contractInstance.requestToContribute.sendTransaction(this.ContributeValue, {
+        value: 0,
+        gas: 200000,
+      }, (err, txhash)=>{
+        if (err) { console.log(err); }
+        else {
+          this.Message = "貢献度の申請を行いました\n" + this.Message;
+          this.ContributeValue = '';
+        }
+      });
+    },
+    vote_for_contribute(){
+      contractInstance.voteForContribute.sendTransaction(this.VoteContributeId, {
+        value: 0,
+        gas: 200000,
+      }, (err, txhash)=>{
+        if (err) { console.log(err); }
+        else {
+          this.Message = "貢献度に投票しました\n" + this.Message;
+          this.VoteContributeId = '';
+        }
+      });
+    },
+    total_contribute_value(){
+      contractInstance.totalContributeValue.call((err, result)=>{
+        if (err) { console.log(err); }
+        else { this.TotalContributeValue = result; }
+      });
+    },
+    deposit_amount(){
+      contractInstance.depositAmount.call((err,result)=>{
+        if (err) { console.log(err); }
+        else { this.DepositAmount = result; }
+      });
+      web3.eth.getBalance(contractAddress, (err, result)=>{
+        if (err) { console.log(err); }
+        else { this.ContractBalance = web3.fromWei(result, 'ether'); }
       });
     },
     pay_to_project(){
       console.log("pay_to_project: ", contractInstance);
-      web3.eth.sendTransaction({
-        value: web3.utils.toWei(this.PayAmount.toString(), 'ether'),
-        gas:                200000,
-        from: "0x9c4E9Ac07D994F1Bf0b6CCADF015544449210C21"
-      }, (err, hash) => {
+      contractInstance.fee.sendTransaction({
+        value: web3.toWei(this.PayAmount, 'ether'),
+        gas: 200000,
+      }, (err, txhash)=>{
         if (err) { console.log(err); }
-        else {
-          console.log('txHash: ', hash); //"0xc00d7771c68ee0636beb7e36939f7fc2ec5715fdfd931f9dfd5a407295baf1c2"
-        }
+        else { this.Message = this.PayAmount + "Ether送金しました\n" + this.Message; }
       });
     }
   }

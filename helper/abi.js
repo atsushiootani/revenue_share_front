@@ -34,12 +34,46 @@ const abi =[
   },
   {
     "constant": true,
+    "inputs": [
+      {
+        "name": "_addr",
+        "type": "address"
+      }
+    ],
+    "name": "contributeValue",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function",
+    "signature": "0x2cee3e94"
+  },
+  {
+    "constant": true,
     "inputs": [],
     "name": "totalContributeValue",
     "outputs": [
       {
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "allWaitingContributes",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256[]"
       }
     ],
     "payable": false,

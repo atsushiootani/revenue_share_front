@@ -8,10 +8,21 @@
         報酬分配を自動化して、みんなのお金をクリアに！
       </h2>
       <br>
+      <h2>Ethereumの情報</h2>
+      <ul>
+        <li>Coinbase: {{CoinBase}}</li>
+        <li>アカウントリスト ({{Accounts.length}})</li>
+        <li v-for="(account, index) in Accounts" :key="index">
+          {{account}}
+        </li>
+      </ul>
+      <br>
       <h2>プロジェクトの情報</h2>
       <ul>
-        <li>参加メンバー数  {{MemberCount}}</li>
-        <li>メンバー一覧 {{Members}}</li>
+        <li>メンバー一覧 ({{AllMembers.length}}人)</li>
+        <li v-for="(member, index) in AllMembers" :key="index">
+          <p>{{member}}</p>
+        </li>
         <li>総貢献度数</li>
         <button type="button" class="btn btn-primary" @click="update_project_info">情報更新</button>
       </ul>
@@ -22,12 +33,20 @@
         <li>
           address: {{CoinBase}}
         </li>
-        <template v-if="IsMember">
+        <template v-if="AmIMember">
           <li>あなたはメンバーです</li>
           <li>
             <input type="text" class="form-control" placeholder="招待したいaddress" v-model="JoinAnotherAddress">
             <button type="button" class="btn btn-primary" @click="request_to_join_another">メンバーに招待する</button>
           </li>
+          <li>
+            <input type="text" class="form-control" placeholder="追加に賛成したいaddress" v-model="VoteForAnotherAddress">
+            <button type="button" class="btn btn-primary" @click="vote_for_member_waiting_for_join">メンバー追加に賛成する</button>
+          </li>
+        </template>
+        <template v-else-if="isWaitingForJoinAddress">
+          <li>あなたはメンバー追加待ち中です</li>
+          <li>参加が許可されるまでお待ちください</li>
         </template>
         <template v-else>
           <li>あなたはメンバーではありません</li>
@@ -63,15 +82,14 @@ var contractInstance;
 export default {
   data() {
     return {
-      Host: "wait..",
       CoinBase: "wait...",
-      AccountCount: "0",
-      Account0: "wait...",
-      IsMember: false,
-      MemberCount: 0,
-      Members: [],
+      Accounts: [],
+      AmIMember: false,
+      isWaitingForJoinAddress: false,
+      AllMembers: [],
       PayAmount: "",
       JoinAnotherAddress: "",
+      VoteForAnotherAddress: '',
       Message: "",
     }
   },
@@ -81,35 +99,41 @@ export default {
     web3 = new Web3(window.ethereum);
     console.log('web3:', web3);
     ethereum.enable().then(()=>{
-      let contractAddress = "0x8cD9eb6745Bc504850ec7f4175F938076d3a3b6e";
+      let contractAddress = "0xb89A028C868186B1568f1cA109dCFA191eac5b32";
       let MyContract = web3.eth.contract(abi);
       contractInstance = MyContract.at(contractAddress);
       console.log("contractInstance:", contractInstance);
-      //contractInstance.options.address = contractAddress;
       console.log("contractInstance:", contractInstance);
       console.log('contractInstance.transactionHash:', contractInstance.transactionHash); //null
       console.log('contractInstance.address:', contractInstance.address); //contractAddress
+
+      this.CoinBase = web3.eth.coinbase;
+      this.Accounts = web3.eth.accounts;
       this.update_project_info();
     });
   },
   methods: {
     update_project_info(){
-      console.log("contract: ", contractInstance);
+      this.am_i_member();
+      this.all_members();
+      this.am_i_waiting_for_join_address();
+    },
+    all_members(){
+      contractInstance.allMembers.call((err,result)=>{
+        if (err) { console.log(err); }
+        else { this.AllMembers = result; }
+      });
+    },
+    am_i_member(){
       contractInstance.amIMember.call((err, result)=>{
         if (err) { console.log(err); }
-        else { this.IsMember  = result; }
+        else { this.AmIMember  = result; }
       });
-      contractInstance.members.call(0, (err,result)=>{
+    },
+    am_i_waiting_for_join_address(){
+      contractInstance.isWaitingForJoinAddress.call(this.CoinBase, (err, result)=>{
         if (err) { console.log(err); }
-        else { this.Members = result; }
-      });
-      contractInstance.memberCount.call((err,result)=>{
-        if (err) { console.log(err); }
-        else { this.MemberCount = result; }
-      });
-      contractInstance.membersWaitingForJoin.call(this.JoinAnotherAddress, (err,result)=>{
-        if (err) { console.log(err); }
-        else { console.log('membersWaitingForJoin', result); }
+        else { this.isWaitingForJoinAddress = result; }
       });
     },
     request_to_join(){
@@ -117,7 +141,6 @@ export default {
       contractInstance.requestToJoin.sendTransaction({
         value: 0,
         gas: 200000,
-        from: "0xcfc6060C859FA123E3860d84868479A5e20F24a3",
       }, (err, transactionHash) =>{
         if (err) { console.log(err); }
         else { this.Message = "参加申請をしました\n" + this.Message; }
@@ -128,6 +151,16 @@ export default {
       contractInstance.requestToJoinAnother.sendTransaction(this.JoinAnotherAddress, (err, transactionHash) => {
         if (err) { console.log(err); }
         else { this.Message = "参加申請をしました\n" + this.Message; }
+      });
+    },
+    vote_for_member_waiting_for_join(){
+      contractInstance.voteForMemberWaitingForJoin.sendTransaction(this.VoteForAnotherAddress,{
+        value: 0,
+        gas: 200000,
+        nonce: 1,
+      }, (err, txhash)=>{
+        if (err) { console.log(err); }
+        else { this.Message = this.VoteForAnotherAddress + "に投票しました\n" + this.Message; }
       });
     },
     pay_to_project(){

@@ -24,7 +24,6 @@
           <p>{{member}}</p>
         </li>
         <li>総貢献度数 {{TotalContributeValue}}</li>
-        <button type="button" class="btn btn-primary" @click="update_project_info">情報更新</button>
       </ul>
       <br>
       <br>
@@ -32,8 +31,9 @@
       <ul>
         <li>address: {{CoinBase}}</li>
         <li>残高: {{Balance}} Ether </li>
+        <br>
         <template v-if="AmIMember">
-          <li>あなたはメンバーです</li>
+          <li><h3>あなたはメンバーです</h3></li>
           <li>
             <input type="text" class="form-control" placeholder="招待したいaddress" v-model="JoinAnotherAddress">
             <button type="button" class="btn btn-primary" @click="request_to_join_another">メンバーに招待する</button>
@@ -42,21 +42,27 @@
             <input type="text" class="form-control" placeholder="追加に賛成したいaddress" v-model="VoteForAnotherAddress">
             <button type="button" class="btn btn-primary" @click="vote_for_member_waiting_for_join">メンバー追加に賛成する</button>
           </li>
+          <br>
           <li>
-            貢献度： {{MyContributeValue}}
+            <h3>貢献度： {{MyContributeValue}}</h3>
           </li>
           <li>
             <input type="text" class="form-control" placeholder="貢献度を数値で" v-model="ContributeValue">
-            <button type="button" class="btn btn-primary" @click="request_to_contribute">貢献度を申請する</button>
+            <button type="button" class="btn btn-primary" @click="request_to_contribute">自分の貢献度を申請する</button>
           </li>
-          <li>投票可能な貢献度一覧(自分の貢献には投票できません)</li>
-          <li v-for="(cid, index) in this.VotableContributeIds" :key="index">
-            id: {{cid}}
-          </li>
-          <li>
-            <input type="text" class="form-control" placeholder="承認する貢献のid" v-model="VoteContributeId">
-            <button type="button" class="btn btn-primary" @click="vote_for_contribute">貢献を承認する</button>
-          </li>
+          <template v-if="VotableContributeIds.length > 0">
+            <li>投票可能な貢献度一覧(自分の貢献には投票できません)</li>
+            <li v-for="(cid, index) in this.VotableContributeIds" :key="index">
+              id: {{cid}}
+            </li>
+            <li>
+              <input type="text" class="form-control" placeholder="承認する貢献のid" v-model="VoteContributeId">
+              <button type="button" class="btn btn-primary" @click="vote_for_contribute">他メンバーの貢献を承認する</button>
+            </li>
+          </template>
+          <template v-else>
+            （現在、投票可能な貢献度はありません）
+          </template>
         </template>
         <template v-else-if="isWaitingForJoinAddress">
           <li>あなたはメンバー追加待ち中です</li>
@@ -79,7 +85,9 @@
       </ul>
       <br>
       <br>
+      <h2>お知らせ</h2>
       <p>{{Message}}</p>
+      <br>
     </div>
   </section>
 </template>
@@ -158,15 +166,19 @@ export default {
   },
   methods: {
     update_project_info(){
-      this.am_i_member();
       this.all_members();
       this.get_balance();
       this.am_i_waiting_for_join_address();
       this.total_contribute_value();
-      if (this.AmIMember){
-        this.contributes_of_member();
-        this.all_waiting_contributes();
-      }
+      contractInstance.amIMember.call((err, result)=>{
+        if (err) { console.log(err); }
+        else {
+          this.AmIMember  = result;
+          this.contributes_of_member();
+          this.all_waiting_contributes();
+        }
+      });
+
     },
     get_balance(){
       web3.eth.getBalance(this.CoinBase, (err, result)=>{
@@ -178,12 +190,6 @@ export default {
       contractInstance.allMembers.call((err,result)=>{
         if (err) { console.log(err); }
         else { this.AllMembers = result; }
-      });
-    },
-    am_i_member(){
-      contractInstance.amIMember.call((err, result)=>{
-        if (err) { console.log(err); }
-        else { this.AmIMember  = result; }
       });
     },
     am_i_waiting_for_join_address(){

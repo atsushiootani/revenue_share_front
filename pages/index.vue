@@ -8,14 +8,14 @@
         報酬分配を自動化して、みんなのお金をクリアに！
       </h2>
       <br>
-      <h2>Ethereumの情報</h2>
+      <!--<h2>Ethereumの情報</h2>
       <ul>
         <li>Coinbase: {{CoinBase}}</li>
         <li>アカウントリスト ({{Accounts.length}})</li>
         <li v-for="(account, index) in Accounts" :key="index">
           {{account}}
         </li>
-      </ul>
+      </ul>-->
       <br>
       <h2>プロジェクトの情報</h2>
       <ul>
@@ -25,7 +25,6 @@
         </li>
         <li>総貢献度数 {{TotalContributeValue}}</li>
         <button type="button" class="btn btn-primary" @click="update_project_info">情報更新</button>
-        <li>未分配資金 {{DepositAmount}}, {{ContractBalance}}</li>
       </ul>
       <br>
       <br>
@@ -50,7 +49,7 @@
             <input type="text" class="form-control" placeholder="貢献度を数値で" v-model="ContributeValue">
             <button type="button" class="btn btn-primary" @click="request_to_contribute">貢献度を申請する</button>
           </li>
-          <li>投票可能な貢献度一覧</li>
+          <li>投票可能な貢献度一覧(自分の貢献には投票できません)</li>
           <li v-for="(cid, index) in this.VotableContributeIds" :key="index">
             id: {{cid}}
           </li>
@@ -101,7 +100,6 @@ export default {
       CoinBase: "wait...",
       Accounts: [],
       Balance: '',
-      ContractBalance: '',
       AmIMember: false,
       isWaitingForJoinAddress: false,
       AllMembers: [],
@@ -113,7 +111,6 @@ export default {
       ContributeValue: '',
       VoteContributeId: '',
       TotalContributeValue: 0,
-      DepositAmount: 0,
       Message: "",
     }
   },
@@ -133,6 +130,30 @@ export default {
       this.CoinBase = web3.eth.coinbase;
       this.Accounts = web3.eth.accounts;
       this.update_project_info();
+
+      contractInstance.MemberAdded((err, event)=>{
+        if (err) { console.log(err); }
+        else {
+          console.log(event);
+          this.Message = event.args.member + "がメンバーになりました！\n" + this.Message;
+        }
+      });
+
+      contractInstance.ContributeAdded((err,event)=>{
+        if (err) { console.log(err); }
+        else {
+          console.log(event);
+          this.Message = "貢献(id=" + event.args.contributeId + ")が承認されました！\n" + this.Message;
+        }
+      });
+
+      contractInstance.Distributed((err, event)=>{
+        if (err) { console.log(err); }
+        else{
+          console.log(event);
+          this.Message = "" + event.args.member + "に" + web3.fromWei(event.args.fee, 'ether') + "Etherが分配されました！\n" + this.Message;
+        }
+      });
     });
   },
   methods: {
@@ -142,7 +163,6 @@ export default {
       this.get_balance();
       this.am_i_waiting_for_join_address();
       this.total_contribute_value();
-      this.deposit_amount();
       if (this.AmIMember){
         this.contributes_of_member();
         this.all_waiting_contributes();
@@ -251,16 +271,6 @@ export default {
         else { this.TotalContributeValue = result; }
       });
     },
-    deposit_amount(){
-      contractInstance.depositAmount.call((err,result)=>{
-        if (err) { console.log(err); }
-        else { this.DepositAmount = result; }
-      });
-      web3.eth.getBalance(contractAddress, (err, result)=>{
-        if (err) { console.log(err); }
-        else { this.ContractBalance = web3.fromWei(result, 'ether'); }
-      });
-    },
     pay_to_project(){
       console.log("pay_to_project: ", contractInstance);
       contractInstance.fee.sendTransaction({
@@ -268,7 +278,10 @@ export default {
         gas: 200000,
       }, (err, txhash)=>{
         if (err) { console.log(err); }
-        else { this.Message = this.PayAmount + "Ether送金しました\n" + this.Message; }
+        else {
+          this.Message = this.PayAmount + "Ether送金しました\n" + this.Message;
+          this.PayAmount = '';
+        }
       });
     }
   }

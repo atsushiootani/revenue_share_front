@@ -8,32 +8,45 @@
         報酬分配を自動化して、みんなのお金をクリアに！
       </h2>
       <br>
+      <h2>プロジェクトの情報</h2>
+      <ul>
+        <li>参加メンバー数  {{MemberCount}}</li>
+        <li>メンバー一覧 {{Members}}</li>
+        <li>総貢献度数</li>
+        <button type="button" class="btn btn-primary" @click="update_project_info">情報更新</button>
+      </ul>
+      <br>
+      <br>
       <h2>あなたの情報</h2>
       <ul>
         <li>
           address: {{CoinBase}}
         </li>
-        <li>
-          <template v-if="IsMember">あなたはメンバーです</template>
-          <template v-else>あなたはメンバーではありません</template>
-        </li>
+        <template v-if="IsMember">
+          <li>あなたはメンバーです</li>
+          <li>
+            <input type="text" class="form-control" placeholder="招待したいaddress" v-model="JoinAnotherAddress">
+            <button type="button" class="btn btn-primary" @click="request_to_join_another">メンバーに招待する</button>
+          </li>
+        </template>
+        <template v-else>
+          <li>あなたはメンバーではありません</li>
+          <li>
+            <button type="button" class="btn btn-primary" @click="request_to_join">メンバーとして参加する</button>
+          </li>
+        </template>
       </ul>
       <br>
-
-      <div>
-        情報取得
-        <button type="button" class="btn btn-primary" @click="member_check">click here</button>
-      </div>
-
-      <div>
-        プロジェクトに参加する
-        <button type="button" class="btn btn-primary" @click="request_to_join">click here</button>
-      </div>
-      <div>
+      <br>
+      <h2>プロジェクト外メンバーメニュー</h2>
+      <ul>
         このプロジェクトに送金する
         <input type="text" class="form-control" placeholder="ether" v-model="PayAmount">
-        <button type="button" class="btn btn-primary" @click="pay_to_project">pay!</button>
-      </div>
+        <button type="button" class="btn btn-primary" @click="pay_to_project">送金</button>
+      </ul>
+      <br>
+      <br>
+      <p>{{Message}}</p>
     </div>
   </section>
 </template>
@@ -54,10 +67,12 @@ export default {
       CoinBase: "wait...",
       AccountCount: "0",
       Account0: "wait...",
-      IsMember: true,
+      IsMember: false,
+      MemberCount: 0,
       Members: [],
-      PayAmount: 1,
-      Three: 0
+      PayAmount: "",
+      JoinAnotherAddress: "",
+      Message: "",
     }
   },
   beforeMount(){
@@ -66,7 +81,7 @@ export default {
     web3 = new Web3(window.ethereum);
     console.log('web3:', web3);
     ethereum.enable().then(()=>{
-      let contractAddress = "0x20Edd3b4350c1B5Af4f99DCa29AEf4c5C0473f1E";
+      let contractAddress = "0x8cD9eb6745Bc504850ec7f4175F938076d3a3b6e";
       let MyContract = web3.eth.contract(abi);
       contractInstance = MyContract.at(contractAddress);
       console.log("contractInstance:", contractInstance);
@@ -74,44 +89,59 @@ export default {
       console.log("contractInstance:", contractInstance);
       console.log('contractInstance.transactionHash:', contractInstance.transactionHash); //null
       console.log('contractInstance.address:', contractInstance.address); //contractAddress
+      this.update_project_info();
     });
   },
   methods: {
-    member_check(event){
+    update_project_info(){
       console.log("contract: ", contractInstance);
       contractInstance.amIMember.call((err, result)=>{
-        this.IsMember  = result;
         if (err) { console.log(err); }
-        else {
-          console.log("amIMember: ", result);
-        }
+        else { this.IsMember  = result; }
+      });
+      contractInstance.members.call(0, (err,result)=>{
+        if (err) { console.log(err); }
+        else { this.Members = result; }
+      });
+      contractInstance.memberCount.call((err,result)=>{
+        if (err) { console.log(err); }
+        else { this.MemberCount = result; }
+      });
+      contractInstance.membersWaitingForJoin.call(this.JoinAnotherAddress, (err,result)=>{
+        if (err) { console.log(err); }
+        else { console.log('membersWaitingForJoin', result); }
       });
     },
-    request_to_join(event){
+    request_to_join(){
       console.log("request_to_join: ", contractInstance);
       contractInstance.requestToJoin.sendTransaction({
         value: 0,
         gas: 200000,
-        //from: "0xcfc6060C859FA123E3860d84868479A5e20F24a3",
+        from: "0xcfc6060C859FA123E3860d84868479A5e20F24a3",
       }, (err, transactionHash) =>{
         if (err) { console.log(err); }
-        else {
-          console.log("requestedToJoin: ", transactionHash);
-        }
+        else { this.Message = "参加申請をしました\n" + this.Message; }
       });
     },
-    pay_to_project(event){
+    request_to_join_another(){
+      console.log('this.JoinAnotherAddress: ', this.JoinAnotherAddress, web3.isAddress(this.JoinAnotherAddress));
+      contractInstance.requestToJoinAnother.sendTransaction(this.JoinAnotherAddress, (err, transactionHash) => {
+        if (err) { console.log(err); }
+        else { this.Message = "参加申請をしました\n" + this.Message; }
+      });
+    },
+    pay_to_project(){
       console.log("pay_to_project: ", contractInstance);
       web3.eth.sendTransaction({
         value: web3.utils.toWei(this.PayAmount.toString(), 'ether'),
         gas:                200000,
         from: "0x9c4E9Ac07D994F1Bf0b6CCADF015544449210C21"
-      }, ((err, hash) => {
+      }, (err, hash) => {
         if (err) { console.log(err); }
         else {
           console.log('txHash: ', hash); //"0xc00d7771c68ee0636beb7e36939f7fc2ec5715fdfd931f9dfd5a407295baf1c2"
         }
-      }));
+      });
     }
   }
 }
